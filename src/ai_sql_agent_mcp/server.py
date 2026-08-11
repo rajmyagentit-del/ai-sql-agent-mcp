@@ -128,4 +128,11 @@ if __name__ == "__main__":
     import os as _os
 
     port = int(_os.environ.get("PORT", "8000"))
-    mcp.run(transport="http", host="0.0.0.0", port=port)
+    # Binding to 0.0.0.0 is intentional: this server is designed to be
+    # deployed behind a cloud platform (e.g. Render) that routes external
+    # traffic to it, so it must accept connections from outside localhost.
+    # This is safe here because access is already gated by the guardrail
+    # layer (read-only enforcement) and optional bearer-token auth above;
+    # binding to a single interface would not add meaningful protection
+    # and would break cloud deployment entirely.
+    mcp.run(transport="http", host="0.0.0.0", port=port)  # nosec B104
