@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AI SQL Agent — Live Demo</title>
+<style>
+  body {
+    font-family: -apple-system, sans-serif;
+    max-width: 720px;
+    margin: 40px auto;
+    padding: 0 20px;
+    background: #0d1117;
+    color: #e6edf3;
+  }
+  h1 { font-size: 1.4rem; }
+  p.sub { color: #8b949e; margin-top: -8px; }
+  input {
+    width: 100%;
+    padding: 10px;
+    font-size: 1rem;
+    border-radius: 6px;
+    border: 1px solid #30363d;
+    background: #161b22;
+    color: #e6edf3;
+    box-sizing: border-box;
+  }
+  button {
+    margin-top: 10px;
+    padding: 10px 18px;
+    font-size: 1rem;
+    border-radius: 6px;
+    border: none;
+    background: #238636;
+    color: white;
+    cursor: pointer;
+  }
+  button:disabled { opacity: 0.6; cursor: default; }
+  pre {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    padding: 14px;
+    overflow-x: auto;
+    white-space: pre-wrap;
+  }
+  .examples { color: #8b949e; font-size: 0.9rem; margin-top: 6px; }
+  .examples button {
+    background: #21262d;
+    color: #8b949e;
+    font-size: 0.8rem;
+    padding: 4px 10px;
+    margin: 4px 4px 0 0;
+  }
+</style>
+</head>
+<body>
+  <h1>AI SQL Agent — Live Demo</h1>
+  <p class="sub">
+    Ask a question about the sample customers/orders database.
+    This calls the real, deployed guardrail pipeline.
+  </p>
+  <input id="q" placeholder="e.g. Which customer has spent the most in total?" />
+  <div class="examples">
+    Try:
+    <button onclick="setQ('Show me all customers')">Show me all customers</button>
+    <button onclick="setQ('What is the total order value for each customer?')">
+      Total per customer
+    </button>
+    <button onclick="setQ('Delete all customers')">
+      Delete all customers (should be blocked)
+    </button>
+  </div>
+  <button id="askBtn" onclick="ask()">Ask</button>
+  <pre id="out">Results will appear here.</pre>
+
+<script>
+function setQ(text) { document.getElementById('q').value = text; }
+
+async function ask() {
+  const q = document.getElementById('q').value.trim();
+  const out = document.getElementById('out');
+  const btn = document.getElementById('askBtn');
+  if (!q) return;
+  btn.disabled = true;
+  out.textContent = 'Asking... (first request after idle may take up to 50s to wake the server)';
+  try {
+    const res = await fetch('/api/ask', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({question: q})
+    });
+    const data = await res.json();
+    out.textContent = JSON.stringify(data, null, 2);
+  } catch (err) {
+    out.textContent = 'Request failed: ' + err;
+  } finally {
+    btn.disabled = false;
+  }
+}
+</script>
+</body>
+</html>

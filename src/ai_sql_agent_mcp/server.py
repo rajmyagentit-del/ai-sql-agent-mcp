@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import os
 import sqlite3
+from pathlib import Path as _Path
 
 from fastmcp import FastMCP
 
@@ -42,18 +43,10 @@ def _check_auth(token: str | None) -> None:
         raise PermissionError("Invalid or missing API token.")
 
 
-@mcp.tool
-def ask_database(question: str, api_token: str | None = None) -> dict:
-    """Answer a natural-language question by generating and safely
-    executing a read-only SQL query against the connected database.
-
-    Args:
-        question: A natural-language question about the data.
-        api_token: Required if SQL_AGENT_API_TOKEN is configured on the server.
-
-    Returns:
-        A dict with either the query results or a structured error/reason.
-    """
+def _run_ask_database(question: str, api_token: str | None = None) -> dict:
+    """Core logic shared by the MCP tool and the plain REST demo endpoint,
+    so both go through the exact same guardrail/generation/execution path
+    rather than maintaining two copies of the safety-critical logic."""
     with trace_query(question) as trace:
         try:
             _check_auth(api_token)
@@ -95,6 +88,21 @@ def ask_database(question: str, api_token: str | None = None) -> dict:
 
 
 @mcp.tool
+def ask_database(question: str, api_token: str | None = None) -> dict:
+    """Answer a natural-language question by generating and safely
+    executing a read-only SQL query against the connected database.
+
+    Args:
+        question: A natural-language question about the data.
+        api_token: Required if SQL_AGENT_API_TOKEN is configured on the server.
+
+    Returns:
+        A dict with either the query results or a structured error/reason.
+    """
+    return _run_ask_database(question, api_token)
+
+
+@mcp.tool
 def describe_schema() -> dict:
     """Return the current database schema (tables, columns, foreign keys)."""
     conn = _get_connection()
@@ -122,6 +130,48 @@ async def health(_request):
     from starlette.responses import JSONResponse
 
     return JSONResponse({"status": "ok"})
+
+
+_DEMO_HTML_PATH = _Path(__file__).parent / "templates" / "demo.html"
+
+
+@mcp.custom_route("/demo", methods=["GET"])
+async def demo_page(_request):
+    from starlette.responses import HTMLResponse
+
+    return HTMLResponse(_DEMO_HTML_PATH.read_text())
+
+
+@mcp.custom_route("/api/ask", methods=["POST"])
+async def api_ask(request):
+    from starlette.responses import JSONResponse
+
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"ok": False, "error": "invalid_json"}, status_code=400)
+
+    question = body.get("question", "")
+    if not question:
+        return JSONResponse({"ok": False, "error": "missing_question"}, status_code=400)
+
+    try:
+        result = _run_ask_database(question, body.get("api_token"))
+        return JSONResponse(result)
+    except Exception as exc:
+        # Never leak a bare 500/stack trace to the browser demo. Log the
+        # real exception server-side, but return a clean, structured error
+        # to the client — e.g. a misconfigured ANTHROPIC_API_KEY should
+        # surface as a readable message, not an opaque failure.
+        import logging
+
+        logging.getLogger("ai_sql_agent_mcp").exception(
+            "Unhandled error in /api/ask for question=%r", question
+        )
+        return JSONResponse(
+            {"ok": False, "error": "internal_error", "reason": str(exc)},
+            status_code=500,
+        )
 
 
 if __name__ == "__main__":
