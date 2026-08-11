@@ -1,6 +1,6 @@
 # AI SQL Agent MCP Server
 
-[![Tests](https://img.shields.io/badge/tests-passing-brightgreen)](#testing)
+[![Tests](https://github.com/rajmyagentit-del/ai-sql-agent-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/rajmyagentit-del/ai-sql-agent-mcp/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-MIT-blue)](#license)
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue)](#tech-stack)
 [![FastMCP](https://img.shields.io/badge/built%20on-FastMCP-orange)](https://github.com/PrefectHQ/fastmcp)
