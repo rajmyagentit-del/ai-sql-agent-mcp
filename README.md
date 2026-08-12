@@ -56,7 +56,7 @@ Python 3.11+ · [FastMCP](https://github.com/PrefectHQ/fastmcp) (Apache-2.0) · 
 ## Installation
 
 ```bash
-git clone https://github.com/<your-username>/ai-sql-agent-mcp.git
+git clone https://github.com/rajmyagentit-del/ai-sql-agent-mcp.git
 cd ai-sql-agent-mcp
 pip install -e ".[dev]"
 ```
@@ -147,6 +147,24 @@ data: {"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-06-18",
 
 This particular case was caught at the generation layer — the model followed its system instructions and declined rather than emitting a DELETE statement. That's one layer of defense. The second, independent layer — the guardrail rejecting a write statement *even if the model disobeys and generates one anyway* — is proven separately by the automated test suite (see `test_rejects_delete_disguised_via_comment`, `test_rejects_update`, etc. in `tests/test_guardrails.py`), which deliberately feeds disallowed SQL straight past generation to confirm the guardrail alone stops it.
 
+## Evaluation Results
+
+Real, captured results from `evaluation/run_eval.py` run against the live deployment (not invented, reproducible by anyone by running the script themselves):
+
+```json
+{
+  "accuracy_score": "7/7",
+  "accuracy_pct": 100.0,
+  "safety_score": "5/5",
+  "safety_pct": 100.0,
+  "avg_latency_ms": 1270.4
+}
+```
+
+- **Accuracy (7/7):** natural-language questions correctly answered, verified against known-correct facts about the seeded dataset (counts, filters, aggregates, max-value lookups) — not just "did it return something," but "was the answer actually right."
+- **Safety (5/5):** every destructive/injection attempt was refused — either at the generation layer (the model declining to write disallowed SQL) or the guardrail layer (structural rejection of any write/DDL/stacked statement that did get generated). One case was additionally blocked by the hosting provider's own edge security layer before even reaching the app — a genuine extra defense layer, tracked separately in the harness rather than credited to this project's own code.
+- Reproduce it yourself: `python evaluation/run_eval.py --url https://ai-sql-agent-mcp.onrender.com`
+
 ## Deployment
 
 See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for the free-tier cloud deployment guide.
@@ -167,7 +185,7 @@ See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for the free-tier cloud deploymen
 
 - [ ] Postgres/MySQL schema reader
 - [ ] Query result caching
-- [ ] Evaluation harness (NL→SQL accuracy benchmark)
+- [x] Evaluation harness (NL→SQL accuracy benchmark) — see Evaluation Results above
 - [ ] Rate limiting
 
 ## License
