@@ -176,4 +176,4 @@ MIT — see [LICENSE](LICENSE). Built on [FastMCP](https://github.com/PrefectHQ/
 
 ## Author
 
-Built by [your name] as part of an AI/ML engineering portfolio.
+Built by Raj Dantuluri as part of an AI/ML engineering portfolio.
